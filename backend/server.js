@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import mongoose from 'mongoose';
 import connectDB from './config/db.js';
 
 // Routes
@@ -39,14 +40,36 @@ console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`MONGO_URI defined: ${Boolean(process.env.MONGO_URI)}`);
 
 // Connect to MongoDB with retry mechanism
+let isConnected = false;
+let retryCount = 0;
+const MAX_RETRIES = 5;
+
 (async function connectWithRetry() {
   try {
-    await connectDB();
+    if (!isConnected && retryCount < MAX_RETRIES) {
+      retryCount++;
+      console.log(`MongoDB connection attempt ${retryCount} of ${MAX_RETRIES}...`);
+      await connectDB();
+      isConnected = true;
+      console.log('MongoDB connection established successfully');
+    }
   } catch (error) {
-    console.error('Failed to connect to MongoDB. Retrying in 5 seconds...');
-    setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+    console.error(`Failed to connect to MongoDB (attempt ${retryCount}/${MAX_RETRIES})`);
+    console.error(`Error: ${error.message}`);
+    
+    if (retryCount < MAX_RETRIES) {
+      console.log(`Retrying in 5 seconds...`);
+      setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+    } else {
+      console.error('Maximum retry attempts reached. Starting server without MongoDB connection.');
+      // Continue with server startup even if MongoDB connection fails
+      // This allows the server to handle requests that don't require database access
+    }
   }
 })();
+
+// Start the server regardless of database connection status
+// This ensures the application is responsive even if the database is temporarily unavailable
 
 // Initialize express app
 const app = express();
@@ -77,6 +100,21 @@ app.use('/api/users', userRoutes);
 // Root route
 app.get('/', (req, res) => {
   res.send('Education Point API is running...');
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const health = {
+    uptime: process.uptime(),
+    timestamp: Date.now(),
+    database: {
+      connected: mongoose.connection.readyState === 1,
+      state: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown'
+    },
+    environment: process.env.NODE_ENV || 'development'
+  };
+  
+  res.status(200).json(health);
 });
 
 // Error handling middleware

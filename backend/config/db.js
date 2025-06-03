@@ -17,34 +17,25 @@ if (fs.existsSync(envPath)) {
 
 // MongoDB Atlas connection string - hardcoded for reliability
 // This is used as a fallback and in deployment environments
-const MONGODB_ATLAS_URI = 'mongodb+srv://EducationPoint:educationpoint@cluster0.bvrlwvk.mongodb.net/education-point?retryWrites=true&w=majority&appName=EducationPoint';
+export const MONGODB_ATLAS_URI = 'mongodb+srv://EducationPoint:educationpoint@cluster0.bvrlwvk.mongodb.net/education-point?retryWrites=true&w=majority&appName=EducationPoint';
 
 const connectDB = async () => {
   try {
-    // In production or deployment environments, always use the hardcoded URI for reliability
-    // In development, use the environment variable if available
-    const isProduction = process.env.NODE_ENV === 'production';
-    const mongoUri = isProduction ? MONGODB_ATLAS_URI : (process.env.MONGO_URI || MONGODB_ATLAS_URI);
-    
-    // Safely log the URI without exposing credentials
-    let safeUriForLogging;
-    try {
-      if (mongoUri.includes('@')) {
-        const parts = mongoUri.split('@');
-        const credentials = parts[0].split('//')[1];
-        const hostPart = parts[1];
-        safeUriForLogging = `${mongoUri.split('//')[0]}//${credentials.split(':')[0]}:****@${hostPart}`;
-      } else {
-        safeUriForLogging = 'MongoDB URI format is not standard';
-      }
-    } catch (err) {
-      safeUriForLogging = 'Unable to parse MongoDB URI for logging';
-    }
+    // Always use the hardcoded URI for reliability in all environments
+    // This ensures consistent connection behavior regardless of environment variables
+    const mongoUri = MONGODB_ATLAS_URI;
     
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Attempting to connect to MongoDB...`);
+    console.log(`Attempting to connect to MongoDB Atlas...`);
     
-    const conn = await mongoose.connect(mongoUri);
+    // Set connection options for better reliability
+    const options = {
+      serverSelectionTimeoutMS: 5000, // Timeout after 5 seconds instead of 30
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      family: 4 // Use IPv4, skip trying IPv6
+    };
+    
+    const conn = await mongoose.connect(mongoUri, options);
     
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn;
