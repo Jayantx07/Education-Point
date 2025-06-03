@@ -6,6 +6,10 @@ const courseApi = axios.create({
   baseURL: `${API_URL}/courses`,
 });
 
+const userApi = axios.create({
+  baseURL: `${API_URL}/users`,
+});
+
 // Fetch all courses
 export const getAllCourses = async (category = 'all', search = '') => {
   try {
@@ -96,6 +100,22 @@ export const deleteCourse = async (id, token) => {
   }
 };
 
+// Fetch all instructors (users who can teach courses)
+export const getAllInstructors = async (token) => {
+  try {
+    const config = token ? {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    } : {};
+    const response = await userApi.get('/instructors', config);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching instructors:', error.response ? error.response.data : error.message);
+    throw error.response ? error.response.data : new Error('Failed to fetch instructors');
+  }
+};
+
 export default {
   getAllCourses,
   getPopularCourses,
@@ -103,4 +123,5 @@ export default {
   createCourse,
   updateCourse,
   deleteCourse,
+  getAllInstructors,
 };
