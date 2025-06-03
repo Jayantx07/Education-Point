@@ -2,8 +2,14 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Configure axios with longer timeout for Render free tier
+const axiosConfig = {
+  timeout: 30000, // 30 seconds timeout for Render free tier spin-up
+};
+
 const contactApi = axios.create({
   baseURL: `${API_URL}/contact`,
+  ...axiosConfig
 });
 
 // Submit a contact form message
