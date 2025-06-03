@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import connectDB from './config/db.js';
 
 // Routes
@@ -11,15 +12,34 @@ import contactRoutes from './routes/contactRoutes.js';
 import testimonialRoutes from './routes/testimonialRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 
-// Load environment variables
-dotenv.config();
-
-// Connect to MongoDB
-connectDB();
-
 // ES module fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables
+// Try to load from .env file in the current directory
+const envPath = path.resolve(__dirname, '.env');
+console.log(`Looking for .env file at: ${envPath}`);
+const envFileExists = fs.existsSync(envPath);
+console.log(`File exists: ${envFileExists}`);
+
+// Load environment variables from .env file if it exists
+if (envFileExists) {
+  dotenv.config({ path: envPath });
+} else {
+  // If .env file doesn't exist, try loading from default location
+  dotenv.config();
+  console.log('Using default dotenv.config() as .env file was not found at the specified path');
+}
+
+// Log environment variables (without sensitive data)
+console.log('Environment variables loaded:');
+console.log(`PORT: ${process.env.PORT}`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`MONGO_URI defined: ${Boolean(process.env.MONGO_URI)}`);
+
+// Connect to MongoDB
+connectDB();
 
 // Initialize express app
 const app = express();
