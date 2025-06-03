@@ -15,28 +15,49 @@ if (fs.existsSync(envPath)) {
   dotenv.config({ path: envPath });
 }
 
-// MongoDB Atlas connection string from .env file
-// This is the hardcoded fallback in case the environment variable is not available
-const MONGODB_ATLAS_URI = 'mongodb://EducationPoint:educationpoint@ac-fsz63gw-shard-00-00.bvrlwvk.mongodb.net:27017,ac-fsz63gw-shard-00-01.bvrlwvk.mongodb.net:27017,ac-fsz63gw-shard-00-02.bvrlwvk.mongodb.net:27017/?ssl=true&replicaSet=atlas-tjubde-shard-0&authSource=admin&retryWrites=true&w=majority&appName=EducationPoint';
+// MongoDB Atlas connection string - hardcoded for reliability
+// This is used as a fallback and in deployment environments
+const MONGODB_ATLAS_URI = 'mongodb+srv://EducationPoint:educationpoint@cluster0.bvrlwvk.mongodb.net/education-point?retryWrites=true&w=majority&appName=EducationPoint';
 
 const connectDB = async () => {
   try {
-    // Use the environment variable if available, otherwise use the hardcoded URI
-    const mongoUri = process.env.MONGO_URI || MONGODB_ATLAS_URI;
+    // In production or deployment environments, always use the hardcoded URI for reliability
+    // In development, use the environment variable if available
+    const isProduction = process.env.NODE_ENV === 'production';
+    const mongoUri = isProduction ? MONGODB_ATLAS_URI : (process.env.MONGO_URI || MONGODB_ATLAS_URI);
     
-    // Log the MongoDB URI being used (without sensitive credentials)
-    const mongoUriForLogging = mongoUri 
-      ? `${mongoUri.split('@')[0].split(':')[0]}:****@${mongoUri.split('@')[1]}`
-      : 'MongoDB URI is not defined';
+    // Safely log the URI without exposing credentials
+    let safeUriForLogging;
+    try {
+      if (mongoUri.includes('@')) {
+        const parts = mongoUri.split('@');
+        const credentials = parts[0].split('//')[1];
+        const hostPart = parts[1];
+        safeUriForLogging = `${mongoUri.split('//')[0]}//${credentials.split(':')[0]}:****@${hostPart}`;
+      } else {
+        safeUriForLogging = 'MongoDB URI format is not standard';
+      }
+    } catch (err) {
+      safeUriForLogging = 'Unable to parse MongoDB URI for logging';
+    }
     
-    console.log(`Attempting to connect to MongoDB with URI: ${mongoUriForLogging}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Attempting to connect to MongoDB...`);
     
     const conn = await mongoose.connect(mongoUri);
+    
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
-    console.error('Full error:', error);
-    process.exit(1);
+    console.error('Full error stack:', error.stack);
+    
+    // Don't exit the process in production, allow for retry mechanisms
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
+    
+    throw error; // Re-throw for handling by caller
   }
 };
 

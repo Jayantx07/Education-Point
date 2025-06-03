@@ -38,8 +38,15 @@ console.log(`PORT: ${process.env.PORT}`);
 console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`MONGO_URI defined: ${Boolean(process.env.MONGO_URI)}`);
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB with retry mechanism
+(async function connectWithRetry() {
+  try {
+    await connectDB();
+  } catch (error) {
+    console.error('Failed to connect to MongoDB. Retrying in 5 seconds...');
+    setTimeout(connectWithRetry, 5000); // Retry after 5 seconds
+  }
+})();
 
 // Initialize express app
 const app = express();
