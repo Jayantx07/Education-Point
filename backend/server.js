@@ -39,6 +39,12 @@ console.log(`PORT: ${process.env.PORT}`);
 console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`MONGO_URI defined: ${Boolean(process.env.MONGO_URI)}`);
 
+// Force production mode if running on Render
+if (process.env.RENDER === 'true') {
+  console.log('Detected Render environment, forcing NODE_ENV to production');
+  process.env.NODE_ENV = 'production';
+}
+
 // Connect to MongoDB with retry mechanism
 let isConnected = false;
 let retryCount = 0;
@@ -78,9 +84,25 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 // Configure CORS to allow requests from your frontend
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://education-point.netlify.app', 'https://educationpointt.netlify.app', 'https://www.education-point.com'] // Add your Netlify domain and any other domains
-    : 'http://localhost:5173', // Vite's default port for development
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://education-point.netlify.app',
+      'https://educationpointt.netlify.app',
+      'https://www.education-point.com'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -102,6 +124,16 @@ app.get('/', (req, res) => {
   res.send('Education Point API is running...');
 });
 
+// CORS test endpoint
+app.get('/cors-test', (req, res) => {
+  res.json({
+    message: 'CORS is working!',
+    origin: req.headers.origin || 'No origin header',
+    environment: process.env.NODE_ENV,
+    render: process.env.RENDER === 'true'
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   const health = {
@@ -111,7 +143,12 @@ app.get('/health', (req, res) => {
       connected: mongoose.connection.readyState === 1,
       state: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown'
     },
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    cors: {
+      origin: req.headers.origin || 'No origin header',
+      isProduction: process.env.NODE_ENV === 'production',
+      isRender: process.env.RENDER === 'true'
+    }
   };
   
   res.status(200).json(health);
