@@ -1,6 +1,8 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+console.log('Auth Service - API URL:', API_URL);
+console.log('Environment Variables:', import.meta.env);
 
 // Configure axios with longer timeout for Render free tier
 const axiosConfig = {
