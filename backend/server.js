@@ -79,7 +79,7 @@ const PORT = process.env.PORT || 5000;
 // Configure CORS to allow requests from your frontend
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://education-point.netlify.app', 'https://www.education-point.com'] // Add your Netlify domain and any other domains
+    ? ['https://education-point.netlify.app', 'https://educationpointt.netlify.app', 'https://www.education-point.com'] // Add your Netlify domain and any other domains
     : 'http://localhost:5173', // Vite's default port for development
   credentials: true,
   optionsSuccessStatus: 200
