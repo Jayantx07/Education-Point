@@ -26,7 +26,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+// Configure CORS to allow requests from your frontend
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://education-point.netlify.app', 'https://www.education-point.com'] // Add your Netlify domain and any other domains
+    : 'http://localhost:5173', // Vite's default port for development
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
